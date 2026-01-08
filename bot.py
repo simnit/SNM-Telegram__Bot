@@ -7,60 +7,24 @@ from telegram import (
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
-    MessageHandler,
     CallbackQueryHandler,
     ContextTypes,
-    filters,
 )
 
 TOKEN = os.getenv("BOT_TOKEN")
+ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")  # e.g. "123456789"
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")  # e.g. "snmassets" (no @)
 
-# Railway Variables:
-# ADMIN_CHAT_ID = your numeric Telegram ID (example: 123456789)
-# ADMIN_USERNAME = your Telegram username without @ (example: snmassets)
-ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
-ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
-
-WELCOME = (
-    "Welcome to your one-stop account store 🚀\n"
-    "Browse trusted premium accounts, instant delivery, and smooth deals.\n"
-    "Tap the menu, explore the offers, and upgrade your digital life today 🔐✨\n\n"
-    "Tap *View Products* to continue 👇"
-)
-
-HELP = (
-    "📌 How to use this bot:\n"
-    "1) View Products.\n"
-    "2) Pick a product.\n"
-    "3) Read rules.\n"
-    "4) Tap Confirm.\n"
-    "5) Message admin to finish the deal.\n\n"
-    "Commands:\n"
-    "/start\n"
-    "/help\n"
-    "/about\n"
-)
-
-ABOUT = (
-    "This bot is built to make buying premium accounts easy and secure.\n"
-    "✔ Verified accounts\n"
-    "✔ Fair pricing\n"
-    "✔ Fast support\n"
-    "✔ No unnecessary steps\n\n"
-    "Everything you need, delivered smart and simple 💡"
-)
-
-# ---- PRODUCTS (edit this list) ----
+# --- Product catalog (edit this) ---
 PRODUCTS = {
-    "ChatGpt_Plus": {
-        "name": "ChatGpt Plus",
-        "desc": "ChatGPT is your AI chatbot for everyday use",
+    "netflix_premium": {
+        "name": "Netflix Premium",
+        "desc": "Netflix Premium (Ultra HD, multiple screens)",
         "rules": (
-            "📌 Rules & Guidelines (ChatGpt Plus)\n"
-            "• Upload Proof ScreenShot of your Payment.\n"
-            "• Do not change email/password before paying.\n"
+            "📌 Rules & Guidelines (Netflix Premium)\n"
+            "• Do not change email/password.\n"
             "• Do not share outside your device(s).\n"
-            "• no extra members.\n"
+            "• No profile lock / no extra members.\n"
             "• If login issues happen, message support with screenshot.\n"
         ),
     },
@@ -69,46 +33,38 @@ PRODUCTS = {
         "desc": "Canva Pro access (premium features)",
         "rules": (
             "📌 Rules & Guidelines (Canva Pro)\n"
-            "• Do not share you email with others.\n"
-            "• Do not resell it.\n"
-            "• Use responsibly.\n"
-            "• For issues, contact support immediately.\n"
+            "• Do not remove admin/owner.\n"
+            "• Do not change account email.\n"
+            "• Use responsibly (no policy violations).\n"
+            "• If anything breaks, contact support immediately.\n"
         ),
     },
     "capcut_pro": {
         "name": "CapCut Pro",
-        "desc": "CapCut Pro (4K export, templates, no watermark)",
+        "desc": "CapCut Pro (4K export, premium templates, no watermark)",
         "rules": (
             "📌 Rules & Guidelines (CapCut Pro)\n"
             "• Do not change email/password.\n"
             "• Don’t log in on too many devices.\n"
             "• Avoid suspicious VPN switching.\n"
-            "• For issues, send an error screenshot.\n"
+            "• For issues, message support with your error screenshot.\n"
         ),
     },
 }
 
-
-def start_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🚀 Start / View Products", callback_data="menu")],
-        [InlineKeyboardButton("📌 Help", callback_data="help")],
-        [InlineKeyboardButton("ℹ️ About", callback_data="about")],
-    ])
-
-
-def back_to_products_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("⬅ Back to Products", callback_data="menu")]
-    ])
+WELCOME = (
+    "Welcome to your one-stop account store 🚀\n"
+    "Browse trusted premium accounts, instant delivery, and smooth deals.\n"
+    "Tap the menu, explore the offers, and upgrade your digital life today 🔐✨\n\n"
+    "Choose a product from the menu below 👇"
+)
 
 
 def build_products_menu() -> InlineKeyboardMarkup:
     keyboard = []
     for key, item in PRODUCTS.items():
-        keyboard.append([InlineKeyboardButton(f"🛍 {item['name']}", callback_data=f"prod:{key}")])
+        keyboard.append([InlineKeyboardButton(item["name"], callback_data=f"prod:{key}")])
     keyboard.append([InlineKeyboardButton("📌 Help", callback_data="help")])
-    keyboard.append([InlineKeyboardButton("ℹ️ About", callback_data="about")])
     return InlineKeyboardMarkup(keyboard)
 
 
@@ -119,70 +75,65 @@ def build_confirm_menu(product_key: str) -> InlineKeyboardMarkup:
     ])
 
 
-from urllib.parse import quote
-
 def build_contact_admin_button(product_key: str) -> InlineKeyboardMarkup:
+    # Opens your personal chat (best UX). Needs ADMIN_USERNAME.
     if ADMIN_USERNAME:
-        safe_key = quote(product_key)
-        url = f"https://t.me/{ADMIN_USERNAME}?start=order_{safe_key}"
+        url = f"https://t.me/{ADMIN_USERNAME}?start=buy_{product_key}"
         return InlineKeyboardMarkup([
-            [InlineKeyboardButton("💬 Message Admin", url=url)],
+            [InlineKeyboardButton("💬 Message Admin to Buy", url=url)],
             [InlineKeyboardButton("⬅ Back to Products", callback_data="menu")],
         ])
 
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("⬅ Back to Products", callback_data="menu")],
-    ])
-
-
+    # Fallback: no username set
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("⬅ Back to Products", callback_data="menu")],
     ])
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(WELCOME, reply_markup=start_keyboard(), parse_mode="Markdown")
-
-
-async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(HELP, reply_markup=start_keyboard())
-
-
-async def about_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(ABOUT, reply_markup=start_keyboard())
+    await update.message.reply_text(WELCOME, reply_markup=build_products_menu())
 
 
 async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+
     data = query.data
 
     if data == "menu":
-        await query.edit_message_text("🛍 Select a product:", reply_markup=build_products_menu())
+        await query.edit_message_text(WELCOME, reply_markup=build_products_menu())
         return
 
     if data == "help":
-        await query.edit_message_text(HELP, reply_markup=back_to_products_keyboard())
+        help_text = (
+            "📌 How to use:\n"
+            "1) Pick a product.\n"
+            "2) Read rules.\n"
+            "3) Tap Confirm.\n"
+            "4) You’ll get a button to message the admin.\n"
+        )
+        await query.edit_message_text(help_text, reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("⬅ Back to Products", callback_data="menu")]
+        ]))
         return
 
-    if data == "about":
-        await query.edit_message_text(ABOUT, reply_markup=back_to_products_keyboard())
-        return
-
+    # Product selected
     if data.startswith("prod:"):
-        product_key = data.split("prod:", 1)[1]
+        product_key = data.split("prod:")[1]
         product = PRODUCTS.get(product_key)
 
         if not product:
             await query.edit_message_text("Product not found. Try again.", reply_markup=build_products_menu())
             return
 
+        # store selection
+        context.user_data["selected_product"] = product_key
+
         text = (
-            f"🛍️ *{product['name']}*\n\n"
+            f"🛍️ *{product['name']}*\n"
             f"{product['rules']}\n"
             "If you agree to the rules, tap *Confirm* ✅"
         )
-
         await query.edit_message_text(
             text,
             reply_markup=build_confirm_menu(product_key),
@@ -190,8 +141,9 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    # Confirm clicked
     if data.startswith("confirm:"):
-        product_key = data.split("confirm:", 1)[1]
+        product_key = data.split("confirm:")[1]
         product = PRODUCTS.get(product_key)
 
         if not product:
@@ -200,14 +152,16 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         user = query.from_user
         username = f"@{user.username}" if user.username else "(no username)"
+        user_link = f"tg://user?id={user.id}"
 
-        # Notify admin (you)
+        # 1) Notify admin (YOU)
         if ADMIN_CHAT_ID:
             admin_msg = (
                 "🧾 *New Purchase Request*\n\n"
                 f"👤 Buyer: {user.full_name}\n"
                 f"🔗 Username: {username}\n"
-                f"🆔 User ID: `{user.id}`\n\n"
+                f"🆔 User ID: `{user.id}`\n"
+                f"📎 Link: {user_link}\n\n"
                 f"🛒 Product: *{product['name']}*\n"
                 f"📝 Details: {product['desc']}\n"
             )
@@ -218,26 +172,21 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     parse_mode="Markdown",
                 )
             except Exception as e:
+                # If admin chat_id wrong or bot can't message admin
                 print("Admin notify error:", e)
 
+        # 2) Show user a button to message you (personal chat)
         user_text = (
-    "✅ Order Confirmed!\n\n"
-    "Your request has been sent to the admin 📩\n"
-    "Please tap the button below and send:\n"
-    "• Payment proof\n"
-    "• Any additional details if needed\n\n"
-    "Admin will assist you shortly 💬"
-)
+            "✅ Confirmed!\n\n"
+            "Tap the button below to message the admin to complete your order.\n"
+            "Your selected product will be sent to the admin automatically 💬"
+        )
 
         await query.edit_message_text(
             user_text,
             reply_markup=build_contact_admin_button(product_key),
         )
         return
-
-
-async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Type /start to open the menu 🛍️")
 
 
 def main():
@@ -247,15 +196,10 @@ def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_cmd))
-    app.add_handler(CommandHandler("about", about_cmd))
-
     app.add_handler(CallbackQueryHandler(on_callback))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 
     app.run_polling()
 
 
 if __name__ == "__main__":
     main()
-
