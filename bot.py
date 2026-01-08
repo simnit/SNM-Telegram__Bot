@@ -247,6 +247,25 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Type /start to open the menu 🛍️")
 
 
+async def myid(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    await update.message.reply_text(
+        f"Your Telegram ID is: {user.id}\n"
+        f"Username: @{user.username}" if user.username else f"Your Telegram ID is: {user.id}"
+    )
+
+async def test_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not ADMIN_CHAT_ID:
+        await update.message.reply_text("ADMIN_CHAT_ID is not set in Railway Variables.")
+        return
+    try:
+        await context.bot.send_message(chat_id=int(ADMIN_CHAT_ID), text="✅ Admin notify test message works!")
+        await update.message.reply_text("Test sent to admin ✅ Check your Telegram.")
+    except Exception as e:
+        await update.message.reply_text(f"Failed to message admin: {e}")
+
+
+
 def main():
     if not TOKEN:
         raise RuntimeError("BOT_TOKEN missing in Railway Variables")
@@ -265,3 +284,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
