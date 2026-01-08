@@ -5,7 +5,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, Con
 TOKEN = os.getenv("BOT_TOKEN")
 
 WELCOME = (
-    "👋 Welcome!\n\n"
+    "👋 Welcome to the SNM Asstes Bot This Bot will help you to complete your purchases\n\n"
     "Use these commands:\n"
     "/start - open menu\n"
     "/help - how to use me\n"
@@ -52,3 +52,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
