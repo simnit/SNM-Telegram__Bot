@@ -15,7 +15,6 @@ from telegram.ext import (
     filters,
 )
 
-# ================== ENV ==================
 TOKEN = os.getenv("BOT_TOKEN")
 
 # Railway Variables:
@@ -24,8 +23,6 @@ TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
 
-
-# ================== TEXTS ==================
 WELCOME = (
     "Welcome to your one-stop account store 🚀\n"
     "Browse trusted premium accounts, instant delivery, and smooth deals.\n"
@@ -37,9 +34,8 @@ HELP = (
     "📌 How to use this bot:\n"
     "1) View Products.\n"
     "2) Pick a product.\n"
-    "3) Read rules.\n"
-    "4) Tap Confirm.\n"
-    "5) Message admin to finish the deal.\n\n"
+    "3) Pick a plan (1 Month / 1 Year).\n"
+    "4) Copy the code and message admin.\n\n"
     "Commands:\n"
     "/start\n"
     "/help\n"
@@ -55,7 +51,6 @@ ABOUT = (
     "Everything you need, delivered smart and simple 💡"
 )
 
-# ================== PRODUCTS ==================
 # IMPORTANT: Use SAFE product IDs as keys (no spaces)
 PRODUCTS = {
     "chatgpt_plus": {
@@ -94,8 +89,16 @@ PRODUCTS = {
     },
 }
 
+# Plans (same for all products)
+PLANS = {
+    "year": {"label": "1 Year Access - Price $11", "plan_name": "1 Year"},
+    "month": {"label": "1 Month Access - Price $5", "plan_name": "1 Month"},
+}
 
-# ================== KEYBOARDS ==================
+# Static suffix you requested
+CODE_SUFFIX = "85689098726"
+
+
 def start_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🚀 View Products", callback_data="menu")],
@@ -119,17 +122,21 @@ def build_products_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(keyboard)
 
 
-def build_confirm_menu(product_key: str) -> InlineKeyboardMarkup:
+def build_plan_menu(product_key: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("✅ Confirm", callback_data=f"confirm:{product_key}")],
+        [InlineKeyboardButton(PLANS["year"]["label"], callback_data=f"plan:{product_key}:year")],
+        [InlineKeyboardButton(PLANS["month"]["label"], callback_data=f"plan:{product_key}:month")],
         [InlineKeyboardButton("⬅ Back to Products", callback_data="menu")],
     ])
 
 
-def build_contact_admin_button(product_key: str) -> InlineKeyboardMarkup:
-    safe_key = quote(product_key)
+def build_contact_admin_button(product_key: str, plan_key: str) -> InlineKeyboardMarkup:
+    # Always show a "Message Admin" button.
+    # 1) Best: open username chat with a deep-link
+    # 2) Fallback: open admin by numeric user id (tg://user?id=...)
 
-    # Best: open username chat
+    safe_key = quote(f"{product_key}_{plan_key}")
+
     if ADMIN_USERNAME:
         url = f"https://t.me/{ADMIN_USERNAME}?start=buy_{safe_key}"
         return InlineKeyboardMarkup([
@@ -137,7 +144,6 @@ def build_contact_admin_button(product_key: str) -> InlineKeyboardMarkup:
             [InlineKeyboardButton("⬅ Back to Products", callback_data="menu")],
         ])
 
-    # Fallback: open chat by user id (works in Telegram desktop/mobile)
     if ADMIN_CHAT_ID:
         url = f"tg://user?id={ADMIN_CHAT_ID}"
         return InlineKeyboardMarkup([
@@ -150,7 +156,12 @@ def build_contact_admin_button(product_key: str) -> InlineKeyboardMarkup:
     ])
 
 
-# ================== COMMANDS ==================
+def make_deal_code(product_key: str, plan_key: str) -> str:
+    # Format requested: vt_dis_*include product name and plan*85689098726
+    # Example: vt_dis_chatgpt_plus_year85689098726
+    return f"vt_dis_{product_key}_{plan_key}{CODE_SUFFIX}"
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(WELCOME, reply_markup=start_keyboard(), parse_mode="Markdown")
 
@@ -163,24 +174,6 @@ async def about_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(ABOUT, reply_markup=start_keyboard())
 
 
-async def myid(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    uname = f"@{user.username}" if user.username else "(no username)"
-    await update.message.reply_text(f"🆔 Your Telegram ID: {user.id}\n🔗 Username: {uname}")
-
-
-async def test_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not ADMIN_CHAT_ID:
-        await update.message.reply_text("❌ ADMIN_CHAT_ID is not set in Railway Variables.")
-        return
-    try:
-        await context.bot.send_message(chat_id=int(ADMIN_CHAT_ID), text="✅ Admin notify test message works!")
-        await update.message.reply_text("✅ Test sent to admin. Check your Telegram.")
-    except Exception as e:
-        await update.message.reply_text(f"❌ Failed to message admin: {e}")
-
-
-# ================== CALLBACKS ==================
 async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -198,6 +191,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(ABOUT, reply_markup=back_to_products_keyboard())
         return
 
+    # Product selected -> show plan buttons
     if data.startswith("prod:"):
         product_key = data.split("prod:", 1)[1]
         product = PRODUCTS.get(product_key)
@@ -209,36 +203,39 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = (
             f"🛍️ *{product['name']}*\n\n"
             f"{product['rules']}\n"
-            "If you agree to the rules, tap *Confirm* ✅"
+            "Now choose your plan 👇"
         )
-
         await query.edit_message_text(
             text,
-            reply_markup=build_confirm_menu(product_key),
+            reply_markup=build_plan_menu(product_key),
             parse_mode="Markdown",
         )
         return
 
-    if data.startswith("confirm:"):
-        product_key = data.split("confirm:", 1)[1]
+    # Plan selected -> generate code + notify admin + show message-admin button
+    if data.startswith("plan:"):
+        _, product_key, plan_key = data.split(":", 2)
         product = PRODUCTS.get(product_key)
+        plan = PLANS.get(plan_key)
 
-        if not product:
-            await query.edit_message_text("Product not found. Try again.", reply_markup=build_products_menu())
+        if not product or not plan:
+            await query.edit_message_text("Plan/product not found. Try again.", reply_markup=build_products_menu())
             return
 
         user = query.from_user
         username = f"@{user.username}" if user.username else "(no username)"
+        deal_code = make_deal_code(product_key, plan_key)
 
-        # Notify admin (you)
+        # Notify admin (you) so you can monitor orders
         if ADMIN_CHAT_ID:
             admin_msg = (
-                "🧾 *New Purchase Request*\n\n"
+                "🧾 *New Order Selected*\n\n"
                 f"👤 Buyer: {user.full_name}\n"
                 f"🔗 Username: {username}\n"
                 f"🆔 User ID: `{user.id}`\n\n"
                 f"🛒 Product: *{product['name']}*\n"
-                f"📝 Details: {product['desc']}\n"
+                f"📦 Plan: *{plan['plan_name']}* ({PLANS[plan_key]['label']})\n"
+                f"🔑 Code: `{deal_code}`\n"
             )
             try:
                 await context.bot.send_message(
@@ -247,23 +244,23 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     parse_mode="Markdown",
                 )
             except Exception as e:
-                # You can see this in Railway logs
                 print("Admin notify error:", e)
 
+        # Show code to user
         user_text = (
-            "✅ Order Confirmed!\n\n"
-            "Your request has been sent to the admin 📩\n"
-            "Tap the button below to message the admin and complete your order 💬"
+            "✅ Done!\n\n"
+            f"Your deal code is:\n`{deal_code}`\n\n"
+            "📩 Please message the admin and send this code to complete the deal."
         )
 
         await query.edit_message_text(
             user_text,
-            reply_markup=build_contact_admin_button(product_key),
+            reply_markup=build_contact_admin_button(product_key, plan_key),
+            parse_mode="Markdown",
         )
         return
 
 
-# ================== FALLBACK TEXT ==================
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Type /start to open the menu 🛍️")
 
@@ -274,17 +271,11 @@ def main():
 
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # Commands
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("about", about_cmd))
-    app.add_handler(CommandHandler("myid", myid))
-    app.add_handler(CommandHandler("testadmin", test_admin))
 
-    # Buttons
     app.add_handler(CallbackQueryHandler(on_callback))
-
-    # Text messages
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 
     app.run_polling()
@@ -292,4 +283,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
