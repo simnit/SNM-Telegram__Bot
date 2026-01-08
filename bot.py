@@ -17,11 +17,19 @@ from telegram.ext import (
 
 TOKEN = os.getenv("BOT_TOKEN")
 
-# Railway Variables:
-# ADMIN_CHAT_ID = your numeric Telegram ID (example: 123456789)
-# ADMIN_USERNAME = your username without @ (example: snmassets)
+# Railway Variables (recommended)
+# ADMIN_USERNAME = your Telegram username WITHOUT @ (example: snmassets)
+# ADMIN_CHAT_ID = your numeric Telegram ID (example: 123456789) - used for admin notifications
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
+
+# Optional hard fallback (ONLY if you want):
+# If Railway variable ADMIN_USERNAME is empty, this will be used.
+# Put your username here WITHOUT @ or keep it empty.
+ADMIN_USERNAME_FALLBACK = ""  # e.g. "snmassets"
+
+ADMIN_USERNAME_EFFECTIVE = (ADMIN_USERNAME or ADMIN_USERNAME_FALLBACK).strip()
+
 
 WELCOME = (
     "Welcome to your one-stop account store 🚀\n"
@@ -95,7 +103,7 @@ PLANS = {
     "month": {"label": "1 Month Access - Price $5", "plan_name": "1 Month"},
 }
 
-# Static suffix you requested
+# Your requested suffix
 CODE_SUFFIX = "85689098726"
 
 
@@ -130,36 +138,30 @@ def build_plan_menu(product_key: str) -> InlineKeyboardMarkup:
     ])
 
 
-def build_contact_admin_button(product_key: str, plan_key: str) -> InlineKeyboardMarkup:
-    # Always show a "Message Admin" button.
-    # 1) Best: open username chat with a deep-link
-    # 2) Fallback: open admin by numeric user id (tg://user?id=...)
+def make_deal_code(product_key: str, plan_key: str) -> str:
+    # vt_dis_*product*_*plan*85689098726
+    return f"vt_dis_{product_key}_{plan_key}{CODE_SUFFIX}"
 
-    safe_key = quote(f"{product_key}_{plan_key}")
 
-    if ADMIN_USERNAME:
-        url = f"https://t.me/{ADMIN_USERNAME}?start=buy_{safe_key}"
+def build_after_code_keyboard(product_key: str, plan_key: str) -> InlineKeyboardMarkup:
+    """
+    Always show something:
+    - If username exists: URL button to message admin
+    - Else: a callback button that reveals admin contact info
+    """
+    if ADMIN_USERNAME_EFFECTIVE:
+        safe_key = quote(f"{product_key}_{plan_key}")
+        url = f"https://t.me/{ADMIN_USERNAME_EFFECTIVE}?start=buy_{safe_key}"
         return InlineKeyboardMarkup([
             [InlineKeyboardButton("💬 Message Admin", url=url)],
             [InlineKeyboardButton("⬅ Back to Products", callback_data="menu")],
         ])
 
-    if ADMIN_CHAT_ID:
-        url = f"tg://user?id={ADMIN_CHAT_ID}"
-        return InlineKeyboardMarkup([
-            [InlineKeyboardButton("💬 Message Admin", url=url)],
-            [InlineKeyboardButton("⬅ Back to Products", callback_data="menu")],
-        ])
-
+    # Username not set -> still show a button that gives contact info
     return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📩 Get Admin Contact", callback_data=f"contact:{product_key}:{plan_key}")],
         [InlineKeyboardButton("⬅ Back to Products", callback_data="menu")],
     ])
-
-
-def make_deal_code(product_key: str, plan_key: str) -> str:
-    # Format requested: vt_dis_*include product name and plan*85689098726
-    # Example: vt_dis_chatgpt_plus_year85689098726
-    return f"vt_dis_{product_key}_{plan_key}{CODE_SUFFIX}"
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -226,7 +228,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         username = f"@{user.username}" if user.username else "(no username)"
         deal_code = make_deal_code(product_key, plan_key)
 
-        # Notify admin (you) so you can monitor orders
+        # Notify admin (monitor orders)
         if ADMIN_CHAT_ID:
             admin_msg = (
                 "🧾 *New Order Selected*\n\n"
@@ -234,7 +236,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"🔗 Username: {username}\n"
                 f"🆔 User ID: `{user.id}`\n\n"
                 f"🛒 Product: *{product['name']}*\n"
-                f"📦 Plan: *{plan['plan_name']}* ({PLANS[plan_key]['label']})\n"
+                f"📦 Plan: *{plan['plan_name']}* ({plan['label']})\n"
                 f"🔑 Code: `{deal_code}`\n"
             )
             try:
@@ -246,7 +248,6 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
                 print("Admin notify error:", e)
 
-        # Show code to user
         user_text = (
             "✅ Done!\n\n"
             f"Your deal code is:\n`{deal_code}`\n\n"
@@ -255,7 +256,32 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await query.edit_message_text(
             user_text,
-            reply_markup=build_contact_admin_button(product_key, plan_key),
+            reply_markup=build_after_code_keyboard(product_key, plan_key),
+            parse_mode="Markdown",
+        )
+        return
+
+    # If username is missing, this button will show the contact details
+    if data.startswith("contact:"):
+        _, product_key, plan_key = data.split(":", 2)
+        product = PRODUCTS.get(product_key)
+        plan = PLANS.get(plan_key)
+        deal_code = make_deal_code(product_key, plan_key)
+
+        # This is what user sees when admin username wasn't configured
+        contact_text = (
+            "📩 Admin Contact\n\n"
+            "Admin username is not configured in the bot right now.\n"
+            "Please contact the admin manually and send this code:\n\n"
+            f"`{deal_code}`\n\n"
+            "Then the admin will finish your deal ✅"
+        )
+
+        await query.edit_message_text(
+            contact_text,
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("⬅ Back to Products", callback_data="menu")]
+            ]),
             parse_mode="Markdown",
         )
         return
