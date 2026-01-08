@@ -36,7 +36,6 @@ async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ✔ Fair pricing
 ✔ Fast support
 ✔ No unnecessary steps
-
 Everything you need, delivered smart and simple 💡")
 
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -60,6 +59,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
