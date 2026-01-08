@@ -4,15 +4,13 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, Con
 
 TOKEN = os.getenv("BOT_TOKEN")
 
-WELCOME = (
-    "Welcome to your one-stop account store 🚀
+WELCOME = ("Welcome to your one-stop account store 🚀
 Browse trusted premium accounts, instant delivery, and smooth deals.
 Tap the menu, explore the offers, and upgrade your digital life today 🔐✨\n\n"
     "Use these commands:\n"
     "/start - open menu\n"
     "/help - how to use me\n"
-    "/about - what I do\n"
-)
+    "/about - what I do\n")
 
 HELP = (
     "📌 How to use this bot:\n"
@@ -59,6 +57,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
