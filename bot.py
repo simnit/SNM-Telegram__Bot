@@ -31,7 +31,13 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(HELP)
 
 async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("I’m a Telegram bot running on Railway 🤖🚄")
+    await update.message.reply_text("This bot is built to make buying premium accounts easy and secure.
+✔ Verified accounts
+✔ Fair pricing
+✔ Fast support
+✔ No unnecessary steps
+
+Everything you need, delivered smart and simple 💡")
 
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
@@ -54,5 +60,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
