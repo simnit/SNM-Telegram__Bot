@@ -1,5 +1,4 @@
 import os
-from urllib.parse import quote
 from telegram import (
     Update,
     InlineKeyboardButton,
@@ -26,12 +25,12 @@ WELCOME = (
     "Welcome to your one-stop account store 🚀\n"
     "Browse trusted premium accounts, instant delivery, and smooth deals.\n"
     "Tap the menu, explore the offers, and upgrade your digital life today 🔐✨\n\n"
-    "Tap *View Products* to continue 👇"
+    "Tap *Start / View Products* to continue 👇"
 )
 
 HELP = (
     "📌 How to use this bot:\n"
-    "1) View Products.\n"
+    "1) Tap Start / View Products.\n"
     "2) Pick a product.\n"
     "3) Read rules.\n"
     "4) Tap Confirm.\n"
@@ -53,15 +52,14 @@ ABOUT = (
 
 # ---- PRODUCTS (edit this list) ----
 PRODUCTS = {
-    "ChatGpt_Plus": {
-        "name": "ChatGpt Plus",
-        "desc": "ChatGPT is your AI chatbot for everyday use",
+    "netflix_premium": {
+        "name": "Netflix Premium",
+        "desc": "Netflix Premium (Ultra HD, multiple screens)",
         "rules": (
-            "📌 Rules & Guidelines (ChatGpt Plus)\n"
-            "• Upload Proof ScreenShot of your Payment.\n"
-            "• Do not change email/password before paying.\n"
+            "📌 Rules & Guidelines (Netflix Premium)\n"
+            "• Do not change email/password.\n"
             "• Do not share outside your device(s).\n"
-            "• no extra members.\n"
+            "• No profile lock / no extra members.\n"
             "• If login issues happen, message support with screenshot.\n"
         ),
     },
@@ -70,8 +68,8 @@ PRODUCTS = {
         "desc": "Canva Pro access (premium features)",
         "rules": (
             "📌 Rules & Guidelines (Canva Pro)\n"
-            "• Do not share you email with others.\n"
-            "• Do not resell it.\n"
+            "• Do not remove admin/owner.\n"
+            "• Do not change account email.\n"
             "• Use responsibly.\n"
             "• For issues, contact support immediately.\n"
         ),
@@ -122,8 +120,7 @@ def build_confirm_menu(product_key: str) -> InlineKeyboardMarkup:
 
 def build_contact_admin_button(product_key: str) -> InlineKeyboardMarkup:
     if ADMIN_USERNAME:
-        safe_key = quote(product_key)  # makes it URL-safe
-        url = f"https://t.me/{ADMIN_USERNAME}?start=buy_{safe_key}"
+        url = f"https://t.me/{ADMIN_USERNAME}?start=buy_{product_key}"
         return InlineKeyboardMarkup([
             [InlineKeyboardButton("💬 Message Admin to Buy", url=url)],
             [InlineKeyboardButton("⬅ Back to Products", callback_data="menu")],
@@ -132,7 +129,6 @@ def build_contact_admin_button(product_key: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("⬅ Back to Products", callback_data="menu")],
     ])
-
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -249,5 +245,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
