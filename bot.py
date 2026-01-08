@@ -221,17 +221,13 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 print("Admin notify error:", e)
 
         user_text = (
-            "✅ Confirmed!\n\n"
-            "✅ Order Confirmed!
-
-Your request has been sent to the admin 📩  
-Please tap the button below and send:
-• Your payment proof  
-• Any additional details if needed  
-
-Admin will assist you shortly 💬
-"
-        )
+    "✅ Order Confirmed!\n\n"
+    "Your request has been sent to the admin 📩\n"
+    "Please tap the button below and send:\n"
+    "• Payment proof\n"
+    "• Any additional details if needed\n\n"
+    "Admin will assist you shortly 💬"
+)
 
         await query.edit_message_text(
             user_text,
@@ -262,3 +258,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
