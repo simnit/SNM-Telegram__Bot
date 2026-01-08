@@ -15,6 +15,7 @@ from telegram.ext import (
     filters,
 )
 
+# ================== ENV ==================
 TOKEN = os.getenv("BOT_TOKEN")
 
 # Railway Variables:
@@ -23,6 +24,8 @@ TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
 
+
+# ================== TEXTS ==================
 WELCOME = (
     "Welcome to your one-stop account store 🚀\n"
     "Browse trusted premium accounts, instant delivery, and smooth deals.\n"
@@ -41,6 +44,8 @@ HELP = (
     "/start\n"
     "/help\n"
     "/about\n"
+    "/myid  (see your Telegram ID)\n"
+    "/testadmin (test admin notifications)\n"
 )
 
 ABOUT = (
@@ -52,6 +57,7 @@ ABOUT = (
     "Everything you need, delivered smart and simple 💡"
 )
 
+# ================== PRODUCTS ==================
 # IMPORTANT: Use SAFE product IDs as keys (no spaces)
 PRODUCTS = {
     "chatgpt_plus": {
@@ -91,6 +97,7 @@ PRODUCTS = {
 }
 
 
+# ================== KEYBOARDS ==================
 def start_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🚀 View Products", callback_data="menu")],
@@ -122,12 +129,9 @@ def build_confirm_menu(product_key: str) -> InlineKeyboardMarkup:
 
 
 def build_contact_admin_button(product_key: str) -> InlineKeyboardMarkup:
-    # Always show a "Message Admin" button.
-    # 1) Best: open username chat
-    # 2) Fallback: open admin by numeric user id (tg://user?id=...)
-
     safe_key = quote(product_key)
 
+    # Best: open username chat
     if ADMIN_USERNAME:
         url = f"https://t.me/{ADMIN_USERNAME}?start=buy_{safe_key}"
         return InlineKeyboardMarkup([
@@ -143,12 +147,12 @@ def build_contact_admin_button(product_key: str) -> InlineKeyboardMarkup:
             [InlineKeyboardButton("⬅ Back to Products", callback_data="menu")],
         ])
 
-    # If neither is set, at least show back button + warning text elsewhere
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("⬅ Back to Products", callback_data="menu")],
     ])
 
 
+# ================== COMMANDS ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(WELCOME, reply_markup=start_keyboard(), parse_mode="Markdown")
 
@@ -161,6 +165,24 @@ async def about_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(ABOUT, reply_markup=start_keyboard())
 
 
+async def myid(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    uname = f"@{user.username}" if user.username else "(no username)"
+    await update.message.reply_text(f"🆔 Your Telegram ID: {user.id}\n🔗 Username: {uname}")
+
+
+async def test_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not ADMIN_CHAT_ID:
+        await update.message.reply_text("❌ ADMIN_CHAT_ID is not set in Railway Variables.")
+        return
+    try:
+        await context.bot.send_message(chat_id=int(ADMIN_CHAT_ID), text="✅ Admin notify test message works!")
+        await update.message.reply_text("✅ Test sent to admin. Check your Telegram.")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Failed to message admin: {e}")
+
+
+# ================== CALLBACKS ==================
 async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -227,9 +249,9 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     parse_mode="Markdown",
                 )
             except Exception as e:
+                # You can see this in Railway logs
                 print("Admin notify error:", e)
 
-        # User message + admin button
         user_text = (
             "✅ Order Confirmed!\n\n"
             "Your request has been sent to the admin 📩\n"
@@ -243,27 +265,9 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
 
+# ================== FALLBACK TEXT ==================
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Type /start to open the menu 🛍️")
-
-
-async def myid(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    await update.message.reply_text(
-        f"Your Telegram ID is: {user.id}\n"
-        f"Username: @{user.username}" if user.username else f"Your Telegram ID is: {user.id}"
-    )
-
-async def test_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not ADMIN_CHAT_ID:
-        await update.message.reply_text("ADMIN_CHAT_ID is not set in Railway Variables.")
-        return
-    try:
-        await context.bot.send_message(chat_id=int(ADMIN_CHAT_ID), text="✅ Admin notify test message works!")
-        await update.message.reply_text("Test sent to admin ✅ Check your Telegram.")
-    except Exception as e:
-        await update.message.reply_text(f"Failed to message admin: {e}")
-
 
 
 def main():
@@ -272,11 +276,17 @@ def main():
 
     app = ApplicationBuilder().token(TOKEN).build()
 
+    # Commands
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("about", about_cmd))
+    app.add_handler(CommandHandler("myid", myid))
+    app.add_handler(CommandHandler("testadmin", test_admin))
 
+    # Buttons
     app.add_handler(CallbackQueryHandler(on_callback))
+
+    # Text messages
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 
     app.run_polling()
@@ -284,4 +294,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
