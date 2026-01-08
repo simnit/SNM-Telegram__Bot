@@ -44,8 +44,6 @@ HELP = (
     "/start\n"
     "/help\n"
     "/about\n"
-    "/myid  (see your Telegram ID)\n"
-    "/testadmin (test admin notifications)\n"
 )
 
 ABOUT = (
@@ -294,3 +292,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
