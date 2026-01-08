@@ -25,12 +25,12 @@ WELCOME = (
     "Welcome to your one-stop account store 🚀\n"
     "Browse trusted premium accounts, instant delivery, and smooth deals.\n"
     "Tap the menu, explore the offers, and upgrade your digital life today 🔐✨\n\n"
-    "Tap *Start / View Products* to continue 👇"
+    "Tap *View Products* to continue 👇"
 )
 
 HELP = (
     "📌 How to use this bot:\n"
-    "1) Tap Start / View Products.\n"
+    "1) View Products.\n"
     "2) Pick a product.\n"
     "3) Read rules.\n"
     "4) Tap Confirm.\n"
@@ -52,14 +52,15 @@ ABOUT = (
 
 # ---- PRODUCTS (edit this list) ----
 PRODUCTS = {
-    "netflix_premium": {
-        "name": "Netflix Premium",
-        "desc": "Netflix Premium (Ultra HD, multiple screens)",
+    "ChatGpt_Plus": {
+        "name": "ChatGpt Plus",
+        "desc": "ChatGPT is your AI chatbot for everyday use",
         "rules": (
-            "📌 Rules & Guidelines (Netflix Premium)\n"
-            "• Do not change email/password.\n"
+            "📌 Rules & Guidelines (ChatGpt Plus)\n"
+            "• Upload Proof ScreenShot of your Payment.\n"
+            "• Do not change email/password before paying.\n"
             "• Do not share outside your device(s).\n"
-            "• No profile lock / no extra members.\n"
+            "• no extra members.\n"
             "• If login issues happen, message support with screenshot.\n"
         ),
     },
@@ -68,8 +69,8 @@ PRODUCTS = {
         "desc": "Canva Pro access (premium features)",
         "rules": (
             "📌 Rules & Guidelines (Canva Pro)\n"
-            "• Do not remove admin/owner.\n"
-            "• Do not change account email.\n"
+            "• Do not share you email with others.\n"
+            "• Do not resell it.\n"
             "• Use responsibly.\n"
             "• For issues, contact support immediately.\n"
         ),
@@ -118,13 +119,21 @@ def build_confirm_menu(product_key: str) -> InlineKeyboardMarkup:
     ])
 
 
+from urllib.parse import quote
+
 def build_contact_admin_button(product_key: str) -> InlineKeyboardMarkup:
     if ADMIN_USERNAME:
-        url = f"https://t.me/{ADMIN_USERNAME}?start=buy_{product_key}"
+        safe_key = quote(product_key)
+        url = f"https://t.me/{ADMIN_USERNAME}?start=order_{safe_key}"
         return InlineKeyboardMarkup([
-            [InlineKeyboardButton("💬 Message Admin to Buy", url=url)],
+            [InlineKeyboardButton("💬 Message Admin", url=url)],
             [InlineKeyboardButton("⬅ Back to Products", callback_data="menu")],
         ])
+
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("⬅ Back to Products", callback_data="menu")],
+    ])
+
 
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("⬅ Back to Products", callback_data="menu")],
@@ -213,7 +222,15 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         user_text = (
             "✅ Confirmed!\n\n"
-            "Tap below to message the admin and complete your order 💬"
+            "✅ Order Confirmed!
+
+Your request has been sent to the admin 📩  
+Please tap the button below and send:
+• Your payment proof  
+• Any additional details if needed  
+
+Admin will assist you shortly 💬
+"
         )
 
         await query.edit_message_text(
