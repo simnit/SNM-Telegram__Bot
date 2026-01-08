@@ -1,4 +1,5 @@
 import os
+from urllib.parse import quote
 from telegram import (
     Update,
     InlineKeyboardButton,
@@ -52,7 +53,7 @@ ABOUT = (
 
 # ---- PRODUCTS (edit this list) ----
 PRODUCTS = {
-    "ChatGpt Plus": {
+    "ChatGpt_Plus": {
         "name": "ChatGpt Plus",
         "desc": "ChatGPT is your AI chatbot for everyday use",
         "rules": (
@@ -121,7 +122,8 @@ def build_confirm_menu(product_key: str) -> InlineKeyboardMarkup:
 
 def build_contact_admin_button(product_key: str) -> InlineKeyboardMarkup:
     if ADMIN_USERNAME:
-        url = f"https://t.me/{ADMIN_USERNAME}?start=buy_{product_key}"
+        safe_key = quote(product_key)  # makes it URL-safe
+        url = f"https://t.me/{ADMIN_USERNAME}?start=buy_{safe_key}"
         return InlineKeyboardMarkup([
             [InlineKeyboardButton("💬 Message Admin to Buy", url=url)],
             [InlineKeyboardButton("⬅ Back to Products", callback_data="menu")],
@@ -130,6 +132,7 @@ def build_contact_admin_button(product_key: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("⬅ Back to Products", callback_data="menu")],
     ])
+
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -246,4 +249,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
