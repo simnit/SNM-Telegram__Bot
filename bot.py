@@ -7,12 +7,9 @@ TOKEN = os.getenv("BOT_TOKEN")
 WELCOME = (
     "Welcome to your one-stop account store 🚀\n"
     "Browse trusted premium accounts, instant delivery, and smooth deals.\n"
-    "Tap the menu, explore the offers, and upgrade your digital life today 🔐✨\n\n"
-    "Use these commands:\n"
-    "/start - open menu\n"
-    "/help - how to use me\n"
-    "/about - what I do\n"
+    "Tap the menu, explore the offers, and upgrade your digital life today 🔐✨\n"
 )
+
 
 HELP = (
     "📌 How to use this bot:\n"
@@ -63,3 +60,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
